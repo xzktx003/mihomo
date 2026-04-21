@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "active_id": "bd90df2d16434239a2aee987ee94e864",
+  "subscriptions": [
+    {
+      "id": "bd90df2d16434239a2aee987ee94e864",
+      "name": "备用订阅",
+      "url": "REDACTED",
+      "created_at": "2026-04-20T16:26:09+08:00",
+      "updated_at": "2026-04-20T16:26:09+08:00"
+    },
+    {
+      "id": "fa882149c3ee468d9ada7c29f6400fc7",
+      "name": "个人订阅",
+      "url": "REDACTED",
+      "created_at": "2026-03-30T15:25:53+08:00",
+      "updated_at": "2026-03-30T15:25:53+08:00"
+    },
+    {
+      "id": "13477c77383449088300a283ac8e8fb6",
+      "name": "公司订阅",
+      "url": "REDACTED",
+      "created_at": "2026-03-30T15:05:57+08:00",
+      "updated_at": "2026-03-30T15:26:16+08:00"
+    }
+  ]
+}

@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mihomo Subscription Pool</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3efe5;
+        --paper: #fffdf8;
+        --paper-2: rgba(255, 255, 255, 0.74);
+        --ink: #1d2b24;
+        --muted: #67766a;
+        --line: #d9d2c1;
+        --accent: #176a53;
+        --accent-soft: rgba(23, 106, 83, 0.12);
+        --warn: #a94e16;
+        --warn-soft: rgba(169, 78, 22, 0.12);
+        --danger: #aa3f32;
+        --danger-soft: rgba(170, 63, 50, 0.12);
+        --shadow: 0 18px 50px rgba(36, 39, 28, 0.12);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--ink);
+        font-family: ui-sans-serif, "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(219, 144, 49, 0.14), transparent 28%),
+          radial-gradient(circle at bottom right, rgba(23, 106, 83, 0.16), transparent 28%),
+          var(--bg);
+      }
+
+      .shell {
+        width: min(1180px, calc(100vw - 32px));
+        margin: 24px auto;
+        padding: 28px;
+        background: var(--paper);
+        border: 1px solid rgba(29, 43, 36, 0.08);
+        border-radius: 26px;
+        box-shadow: var(--shadow);
+      }
+
+      .eyebrow {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 18px 0 10px;
+        font-size: clamp(34px, 5vw, 54px);
+        line-height: 0.94;
+      }
+
+      .lead {
+        margin: 0;
+        max-width: 880px;
+        color: var(--muted);
+        line-height: 1.7;
+      }
+
+      .top-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        margin-top: 24px;
+      }
+
+      .panel {
+        padding: 18px;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: var(--paper-2);
+      }
+
+      .panel strong,
+      .section-title {
+        display: block;
+        margin-bottom: 10px;
+        font-size: 14px;
+      }
+
+      .meta {
+        color: var(--muted);
+        line-height: 1.7;
+        font-size: 14px;
+        word-break: break-all;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(320px, 0.95fr) minmax(420px, 1.15fr);
+        gap: 18px;
+        margin-top: 18px;
+      }
+
+      .stack {
+        display: grid;
+        gap: 16px;
+      }
+
+      .field {
+        display: grid;
+        gap: 8px;
+      }
+
+      label {
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      input,
+      textarea {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: #fff;
+        color: var(--ink);
+        padding: 14px 16px;
+        font: inherit;
+        transition: border-color 120ms ease, box-shadow 120ms ease;
+      }
+
+      input:focus,
+      textarea:focus {
+        outline: none;
+        border-color: rgba(23, 106, 83, 0.7);
+        box-shadow: 0 0 0 4px rgba(23, 106, 83, 0.12);
+      }
+
+      textarea {
+        min-height: 170px;
+        resize: vertical;
+      }
+
+      .hint {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .actions,
+      .row-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      button,
+      .link-btn {
+        appearance: none;
+        border: 0;
+        border-radius: 999px;
+        padding: 11px 16px;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+      }
+
+      button.primary {
+        background: var(--accent);
+        color: #fff;
+      }
+
+      button.secondary {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      button.warning {
+        background: var(--warn-soft);
+        color: var(--warn);
+      }
+
+      button.danger {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .link-btn {
+        background: rgba(30, 36, 44, 0.08);
+        color: var(--ink);
+      }
+
+      .status {
+        padding: 12px 14px;
+        border-radius: 15px;
+        background: var(--accent-soft);
+        color: var(--accent);
+        line-height: 1.6;
+        font-size: 14px;
+      }
+
+      .status.error {
+        background: var(--danger-soft);
+        color: var(--danger);
+      }
+
+      .subscription-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .subscription-item {
+        padding: 16px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.86);
+      }
+
+      .subscription-item.active {
+        border-color: rgba(23, 106, 83, 0.4);
+        box-shadow: inset 0 0 0 1px rgba(23, 106, 83, 0.14);
+      }
+
+      .subscription-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+      }
+
+      .subscription-name {
+        font-size: 16px;
+        font-weight: 800;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .badge.active {
+        background: var(--accent-soft);
+        color: var(--accent);
+      }
+
+      .badge.idle {
+        background: rgba(30, 36, 44, 0.08);
+        color: var(--muted);
+      }
+
+      .subscription-url {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.7;
+        word-break: break-all;
+      }
+
+      .subscription-meta {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .empty {
+        padding: 18px;
+        border-radius: 18px;
+        border: 1px dashed var(--line);
+        color: var(--muted);
+        background: rgba(255, 255, 255, 0.54);
+      }
+
+      pre {
+        margin: 0;
+        padding: 18px;
+        border-radius: 18px;
+        border: 1px solid var(--line);
+        background: #1c231f;
+        color: #ecf2ed;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-family: ui-monospace, "SFMono-Regular", "Cascadia Code", "Liberation Mono", monospace;
+        font-size: 13px;
+        line-height: 1.65;
+      }
+
+      .foot {
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      @media (max-width: 980px) {
+        .top-grid,
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .shell {
+          width: min(100vw - 16px, 100%);
+          margin: 8px auto;
+          padding: 18px;
+          border-radius: 20px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="shell">
+      <span class="eyebrow">Mihomo Local Control</span>
+      <h1>订阅池管理</h1>
+      <p class="lead">
+        这里不再只管理一条订阅。你可以保存多条订阅链接，随时新增、编辑、删除，并直接切换当前激活的订阅。
+        切换激活订阅时，页面会调用本机脚本下载配置并自动重启 `mihomo`。
+      </p>
+
+      <section class="top-grid">
+        <article class="panel">
+          <strong>访问入口</strong>
+          <div class="meta" id="entry-meta">加载中...</div>
+        </article>
+        <article class="panel">
+          <strong>运行状态</strong>
+          <div class="meta" id="service-meta">尚未读取</div>
+        </article>
+        <article class="panel">
+          <strong>当前激活</strong>
+          <div class="meta" id="active-meta">尚未读取</div>
+        </article>
+      </section>
+
+      <section class="layout">
+        <article class="panel stack">
+          <div class="section-title">已保存订阅</div>
+          <div class="hint">
+            激活中的订阅会打上“当前使用”标记。删除时不能直接删掉当前激活项，先切换到别的订阅再删除。
+          </div>
+          <div class="subscription-list" id="subscription-list">
+            <div class="empty">输入控制密钥后点击“读取订阅池”加载当前配置。</div>
+          </div>
+        </article>
+
+        <article class="panel stack">
+          <div class="section-title">编辑器</div>
+
+          <div class="field">
+            <label for="secret">控制密钥</label>
+            <input id="secret" type="password" placeholder="输入当前 mihomo secret" />
+            <div class="hint">页面不会自动回显 secret，密钥只保存在当前浏览器的本地存储里。</div>
+          </div>
+
+          <div class="field">
+            <label for="subscription-name">订阅名称</label>
+            <input id="subscription-name" type="text" placeholder="例如：主机场、备用机场、测试线路" />
+          </div>
+
+          <div class="field">
+            <label for="subscription-url">订阅链接</label>
+            <textarea id="subscription-url" placeholder="粘贴新的 clash / mihomo 订阅链接"></textarea>
+            <div class="hint">
+              如果远端地址已经失效，执行输出里会直接显示 `404`、超时或 DNS 错误，方便你判断是不是订阅本身过期。
+            </div>
+          </div>
+
+          <div class="actions">
+            <button class="secondary" id="load-btn" type="button">读取订阅池</button>
+            <button class="secondary" id="new-btn" type="button">新建订阅</button>
+            <button class="primary" id="save-btn" type="button">保存订阅</button>
+            <button class="warning" id="save-switch-btn" type="button">保存并切换</button>
+            <a class="link-btn" id="open-ui" href="#" target="_blank" rel="noreferrer">打开节点选择 UI</a>
+          </div>
+
+          <div class="status" id="status-box">准备就绪。先输入控制密钥，再读取订阅池。</div>
+
+          <div class="field">
+            <label for="output-box">执行输出</label>
+            <pre id="output-box">等待操作...</pre>
+          </div>
+        </article>
+      </section>
+
+      <div class="foot">
+        当前管理 API 监听在 `9091` 端口，节点选择 UI 在 `9090/ui`。如果你通过 `10.30.0.22`
+        访问，页面也会自动回到同一个主机去做订阅读取和切换。
+      </div>
+    </main>
+
+    <script>
+      const host = window.location.hostname || "127.0.0.1";
+      const protocol = window.location.protocol || "http:";
+      const apiBase = `${protocol}//${host}:9091`;
+      const uiBase = `${protocol}//${host}:9090/ui`;
+
+      const state = {
+        subscriptions: [],
+        activeId: "",
+        editingId: "",
+        busy: false,
+      };
+
+      const secretInput = document.getElementById("secret");
+      const nameInput = document.getElementById("subscription-name");
+      const urlInput = document.getElementById("subscription-url");
+      const loadBtn = document.getElementById("load-btn");
+      const newBtn = document.getElementById("new-btn");
+      const saveBtn = document.getElementById("save-btn");
+      const saveSwitchBtn = document.getElementById("save-switch-btn");
+      const statusBox = document.getElementById("status-box");
+      const outputBox = document.getElementById("output-box");
+      const entryMeta = document.getElementById("entry-meta");
+      const serviceMeta = document.getElementById("service-meta");
+      const activeMeta = document.getElementById("active-meta");
+      const subscriptionList = document.getElementById("subscription-list");
+      const openUi = document.getElementById("open-ui");
+
+      entryMeta.textContent = `节点选择页: ${uiBase} | 订阅管理 API: ${apiBase}`;
+      openUi.href = uiBase;
+
+      const savedSecret = localStorage.getItem("mihomo-admin-secret");
+      if (savedSecret) {
+        secretInput.value = savedSecret;
+      }
+
+      secretInput.addEventListener("change", () => {
+        localStorage.setItem("mihomo-admin-secret", secretInput.value.trim());
+      });
+
+      function setBusy(nextBusy) {
+        state.busy = nextBusy;
+        [loadBtn, newBtn, saveBtn, saveSwitchBtn].forEach((button) => {
+          button.disabled = nextBusy;
+        });
+        document.querySelectorAll("[data-sub-action]").forEach((button) => {
+          button.disabled = nextBusy;
+        });
+      }
+
+      function setStatus(message, isError = false) {
+        statusBox.textContent = message;
+        statusBox.classList.toggle("error", isError);
+      }
+
+      function setOutput(message) {
+        outputBox.textContent = message || "没有输出";
+      }
+
+      function authHeaders() {
+        return {
+          "Content-Type": "application/json",
+          "X-Mihomo-Secret": secretInput.value.trim(),
+        };
+      }
+
+      function requireSecret() {
+        if (!secretInput.value.trim()) {
+          setStatus("请先输入控制密钥。", true);
+          return false;
+        }
+        return true;
+      }
+
+      function activeSubscription() {
+        return state.subscriptions.find((item) => item.id === state.activeId) || null;
+      }
+
+      function fillEditor(item) {
+        state.editingId = item ? item.id : "";
+        nameInput.value = item ? item.name : "";
+        urlInput.value = item ? item.url : "";
+      }
+
+      function clearEditor() {
+        fillEditor(null);
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function renderSubscriptions() {
+        if (!state.subscriptions.length) {
+          subscriptionList.innerHTML = '<div class="empty">还没有保存任何订阅。右侧填一条新链接后点“保存订阅”。</div>';
+          return;
+        }
+
+        subscriptionList.innerHTML = state.subscriptions
+          .map((item) => {
+            const isActive = item.id === state.activeId;
+            return `
+              <div class="subscription-item ${isActive ? "active" : ""}">
+                <div class="subscription-head">
+                  <div class="subscription-name">${escapeHtml(item.name)}</div>
+                  <span class="badge ${isActive ? "active" : "idle"}">${isActive ? "当前使用" : "已保存"}</span>
+                </div>
+                <div class="subscription-url">${escapeHtml(item.url)}</div>
+                <div class="subscription-meta">更新于 ${escapeHtml(item.updated_at || item.created_at || "-")}</div>
+                <div class="row-actions" style="margin-top:12px;">
+                  <button class="secondary" data-sub-action="edit" data-id="${escapeHtml(item.id)}">编辑</button>
+                  <button class="primary" data-sub-action="activate" data-id="${escapeHtml(item.id)}" ${isActive ? "disabled" : ""}>切换到此订阅</button>
+                  <button class="danger" data-sub-action="delete" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}" ${isActive ? "disabled" : ""}>删除</button>
+                </div>
+              </div>
+            `;
+          })
+          .join("");
+
+        document.querySelectorAll("[data-sub-action]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const action = button.dataset.subAction;
+            const id = button.dataset.id;
+            if (action === "edit") {
+              const item = state.subscriptions.find((entry) => entry.id === id);
+              if (item) {
+                fillEditor(item);
+                setStatus(`正在编辑订阅：${item.name}`);
+              }
+              return;
+            }
+
+            if (action === "activate") {
+              await activateSubscription(id);
+              return;
+            }
+
+            if (action === "delete") {
+              await deleteSubscription(id, button.dataset.name || "this subscription");
+            }
+          });
+        });
+      }
+
+      function renderMeta(data) {
+        serviceMeta.textContent = `mihomo: ${data.service_status || "unknown"} | 已保存订阅数: ${(data.subscriptions || []).length}`;
+        const current = data.active_subscription;
+        if (!current) {
+          activeMeta.textContent = "当前还没有识别到激活订阅。";
+          return;
+        }
+        activeMeta.textContent = `${current.name} | ${current.url}`;
+      }
+
+      function applyPayload(data) {
+        state.subscriptions = Array.isArray(data.subscriptions) ? data.subscriptions : [];
+        state.activeId = data.active_id || "";
+        renderSubscriptions();
+        renderMeta(data);
+
+        if (state.editingId && !state.subscriptions.some((item) => item.id === state.editingId)) {
+          clearEditor();
+        }
+      }
+
+      async function callApi(path, options = {}) {
+        const response = await fetch(`${apiBase}${path}`, options);
+        const text = await response.text();
+        let data = {};
+        try {
+          data = text ? JSON.parse(text) : {};
+        } catch {
+          data = { ok: false, error: text || "invalid response" };
+        }
+        return { response, data };
+      }
+
+      function formatError(data, fallback) {
+        const main = data.error || fallback;
+        if (data.error_hint) {
+          return `${main} ${data.error_hint}`;
+        }
+        return main;
+      }
+
+      async function refreshStatus(silent = false) {
+        if (!requireSecret()) {
+          return;
+        }
+
+        if (!silent) {
+          setStatus("正在读取订阅池...");
+        }
+
+        const { response, data } = await callApi("/api/status", {
+          method: "GET",
+          headers: authHeaders(),
+        });
+
+        if (!response.ok || !data.ok) {
+          setStatus(formatError(data, "读取订阅池失败。"), true);
+          setOutput(JSON.stringify(data, null, 2));
+          return;
+        }
+
+        applyPayload(data);
+        setOutput(JSON.stringify(data, null, 2));
+        if (!silent) {
+          setStatus("订阅池已刷新。");
+        }
+      }
+
+      async function saveSubscription(activate) {
+        if (!requireSecret()) {
+          return;
+        }
+
+        const url = urlInput.value.trim();
+        const name = nameInput.value.trim();
+
+        if (!url) {
+          setStatus("请先输入订阅链接。", true);
+          return;
+        }
+
+        setBusy(true);
+        setStatus(activate ? "正在保存并切换订阅..." : "正在保存订阅...");
+        setOutput("请求已发送，等待本机脚本执行完成...");
+
+        try {
+          const payload = {
+            id: state.editingId || undefined,
+            name,
+            url,
+            activate,
+          };
+
+          const { response, data } = await callApi("/api/subscriptions", {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify(payload),
+          });
+
+          setOutput(data.output || JSON.stringify(data, null, 2));
+
+          if (!response.ok || !data.ok) {
+            setStatus(formatError(data, activate ? "保存并切换失败。" : "保存失败。"), true);
+            return;
+          }
+
+          applyPayload(data);
+          if (data.saved_subscription) {
+            fillEditor(data.saved_subscription);
+          }
+          setStatus(activate ? "订阅已保存并切换。" : "订阅已保存。");
+        } catch (error) {
+          setStatus(`请求失败: ${error.message}`, true);
+          setOutput(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function activateSubscription(id) {
+        if (!requireSecret()) {
+          return;
+        }
+
+        setBusy(true);
+        setStatus("正在切换激活订阅...");
+        setOutput("请求已发送，等待本机脚本执行完成...");
+
+        try {
+          const { response, data } = await callApi("/api/subscriptions/activate", {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ id }),
+          });
+
+          setOutput(data.output || JSON.stringify(data, null, 2));
+
+          if (!response.ok || !data.ok) {
+            setStatus(formatError(data, "切换订阅失败。"), true);
+            return;
+          }
+
+          applyPayload(data);
+          setStatus("订阅切换完成，mihomo 已按新订阅重启。");
+        } catch (error) {
+          setStatus(`请求失败: ${error.message}`, true);
+          setOutput(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function deleteSubscription(id, name) {
+        if (!requireSecret()) {
+          return;
+        }
+
+        if (!window.confirm(`确认删除订阅：${name}？`)) {
+          return;
+        }
+
+        setBusy(true);
+        setStatus("正在删除订阅...");
+
+        try {
+          const { response, data } = await callApi(`/api/subscriptions/${encodeURIComponent(id)}`, {
+            method: "DELETE",
+            headers: authHeaders(),
+          });
+
+          setOutput(JSON.stringify(data, null, 2));
+
+          if (!response.ok || !data.ok) {
+            setStatus(formatError(data, "删除订阅失败。"), true);
+            return;
+          }
+
+          applyPayload(data);
+          if (state.editingId === id) {
+            clearEditor();
+          }
+          setStatus("订阅已删除。");
+        } catch (error) {
+          setStatus(`请求失败: ${error.message}`, true);
+          setOutput(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      loadBtn.addEventListener("click", () => {
+        refreshStatus(false).catch((error) => {
+          setStatus(`读取失败: ${error.message}`, true);
+          setOutput(String(error));
+        });
+      });
+
+      newBtn.addEventListener("click", () => {
+        clearEditor();
+        setStatus("已切换到新建模式。");
+      });
+
+      saveBtn.addEventListener("click", () => {
+        saveSubscription(false).catch((error) => {
+          setStatus(`保存失败: ${error.message}`, true);
+          setOutput(String(error));
+          setBusy(false);
+        });
+      });
+
+      saveSwitchBtn.addEventListener("click", () => {
+        saveSubscription(true).catch((error) => {
+          setStatus(`保存并切换失败: ${error.message}`, true);
+          setOutput(String(error));
+          setBusy(false);
+        });
+      });
+
+      if (savedSecret) {
+        refreshStatus(true).catch(() => {
+          setStatus("自动读取订阅池失败，请手动点击“读取订阅池”。", true);
+        });
+      }
+    </script>
+  </body>
+</html>

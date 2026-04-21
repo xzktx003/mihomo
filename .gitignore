@@ -1,0 +1,18 @@
+# Runtime state
+.omx/
+__pycache__/
+tmp/
+backups/
+
+# Logs and local databases
+*.log
+*.db
+
+# Live secrets and local runtime config
+.subscription_url
+.subscriptions.json
+config.yaml
+config.raw.yaml
+
+# User-specific service state
+*.pid

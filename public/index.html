@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="shortcut icon" href="yacd.ico" />
+    <link rel="icon" type="image/png" sizes="64x64" href="yacd-64.png" />
+    <link rel="icon" type="image/png" sizes="128x128" href="yacd-128.png" />
+    <link rel="apple-touch-icon-precomposed" href="apple-touch-icon-precomposed.png" />
+    <meta name="apple-mobile-web-app-title" content="yacd">
+    <meta name="theme-color" content="#eeeeee" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#202020" media="(prefers-color-scheme: dark)" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="application-name" content="yacd" />
+    <meta name="description" content="Yet Another Clash Dashboard" />
+    <title>yacd</title>
+    <style>
+      #mihomo-subscription-entry {
+        position: fixed;
+        top: 18px;
+        right: 18px;
+        z-index: 9999;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: rgba(20, 26, 36, 0.84);
+        color: #fff;
+        text-decoration: none;
+        font: 600 13px/1 ui-sans-serif, "Noto Sans SC", "PingFang SC", sans-serif;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(10px);
+        transition: transform 120ms ease, background-color 120ms ease;
+      }
+
+      #mihomo-subscription-entry:hover {
+        background: rgba(15, 113, 91, 0.92);
+        transform: translateY(-1px);
+      }
+
+      @media (max-width: 760px) {
+        #mihomo-subscription-entry {
+          top: auto;
+          right: 14px;
+          bottom: 18px;
+          padding: 11px 15px;
+        }
+      }
+    </style>
+    <script type="module" crossorigin src="./assets/index.171f553a.js"></script>
+    <link rel="stylesheet" href="./assets/index.b38debfc.css">
+  <link rel="manifest" href="./manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="./registerSW.js"></script></head>
+  <body>
+    <div id="app"></div>
+    <a id="mihomo-subscription-entry" href="./subscription.html" title="打开订阅管理页">
+      <span>订阅管理</span>
+    </a>
+    <script>
+      (function () {
+        var app = document.getElementById("app");
+        if (app) {
+          app.dataset.baseUrl = window.location.origin;
+        }
+      })();
+    </script>
+  </body>
+</html>
