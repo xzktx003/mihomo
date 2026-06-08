@@ -9,7 +9,9 @@ MIXIN_CONFIG="$BASE_DIR/mixin.yaml"
 CONFIG_FILE="$BASE_DIR/config.yaml"
 SUBSCRIPTION_FILE="$BASE_DIR/.subscription_url"
 PID_FILE="$BASE_DIR/mihomo.pid"
+ADMIN_PID_FILE="$BASE_DIR/mihomo-admin.pid"
 LOG_FILE="$BASE_DIR/mi.log"
+ADMIN_LOG_FILE="$BASE_DIR/subscription-admin.log"
 BACKUP_DIR="$BASE_DIR/backups"
 TMP_DIR="$BASE_DIR/tmp"
 SYSTEMD_SERVICE="mihomo.service"
@@ -36,8 +38,30 @@ clear_stale_pid() {
   fi
 }
 
+find_mihomo_pid() {
+  local proc cmdline
+  for proc in /proc/[0-9]*; do
+    [[ -r "$proc/cmdline" ]] || continue
+    cmdline="$(tr '\0' ' ' 2>/dev/null <"$proc/cmdline" || true)"
+    cmdline="${cmdline% }"
+    if [[ "$cmdline" == "$MIHOMO_BIN -d $BASE_DIR -f $CONFIG_FILE" ]]; then
+      echo "${proc##*/}"
+      return 0
+    fi
+  done
+  return 1
+}
+
 is_running() {
-  [[ -f "$PID_FILE" ]] || return 1
+  if [[ ! -f "$PID_FILE" ]]; then
+    local discovered_pid
+    discovered_pid="$(find_mihomo_pid || true)"
+    if [[ -n "$discovered_pid" ]]; then
+      echo "$discovered_pid" >"$PID_FILE"
+    else
+      return 1
+    fi
+  fi
   local pid
   pid="$(<"$PID_FILE")"
   [[ "$pid" =~ ^[0-9]+$ ]] || return 1
@@ -51,7 +75,57 @@ running_pid() {
 }
 
 has_user_service() {
-  command -v systemctl >/dev/null 2>&1 && [[ -f "$SYSTEMD_SERVICE_FILE" ]]
+  command -v systemctl >/dev/null 2>&1 && \
+    systemctl --user show-environment >/dev/null 2>&1 && \
+    [[ -f "$SYSTEMD_SERVICE_FILE" ]]
+}
+
+has_admin_user_service() {
+  command -v systemctl >/dev/null 2>&1 && \
+    systemctl --user show-environment >/dev/null 2>&1 && \
+    [[ -f "$ADMIN_SERVICE_FILE" ]]
+}
+
+clear_stale_admin_pid() {
+  if [[ -f "$ADMIN_PID_FILE" ]] && ! is_admin_running; then
+    rm -f "$ADMIN_PID_FILE"
+  fi
+}
+
+find_admin_pid() {
+  local proc cmdline
+  for proc in /proc/[0-9]*; do
+    [[ -r "$proc/cmdline" ]] || continue
+    cmdline="$(tr '\0' ' ' 2>/dev/null <"$proc/cmdline" || true)"
+    cmdline="${cmdline% }"
+    if [[ "$cmdline" == *" $BASE_DIR/subscription_admin.py --host 0.0.0.0 --port 9091" ]]; then
+      echo "${proc##*/}"
+      return 0
+    fi
+  done
+  return 1
+}
+
+is_admin_running() {
+  if [[ ! -f "$ADMIN_PID_FILE" ]]; then
+    local discovered_pid
+    discovered_pid="$(find_admin_pid || true)"
+    if [[ -n "$discovered_pid" ]]; then
+      echo "$discovered_pid" >"$ADMIN_PID_FILE"
+    else
+      return 1
+    fi
+  fi
+  local pid
+  pid="$(<"$ADMIN_PID_FILE")"
+  [[ "$pid" =~ ^[0-9]+$ ]] || return 1
+  kill -0 "$pid" 2>/dev/null
+}
+
+running_admin_pid() {
+  if is_admin_running; then
+    <"$ADMIN_PID_FILE" cat
+  fi
 }
 
 service_is_active() {
@@ -220,4 +294,15 @@ wait_for_ui() {
   done
 
   return 1
+}
+
+ui_is_available() {
+  command -v curl >/dev/null 2>&1 || return 0
+  curl -fsS -o /dev/null --max-time 2 "$(ui_url_local)" 2>/dev/null || \
+    curl -fsS -o /dev/null --max-time 2 "$(ui_url_local)/" 2>/dev/null
+}
+
+admin_is_available() {
+  command -v curl >/dev/null 2>&1 || return 0
+  curl -fsS -o /dev/null --max-time 2 "$(admin_api_url_local)/api/health" 2>/dev/null
 }

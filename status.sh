@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPT_DIR/lib.sh"
 
 clear_stale_pid
+clear_stale_admin_pid
 
 echo "Base dir:  $BASE_DIR"
 echo "Config:    $CONFIG_FILE"
@@ -45,14 +46,38 @@ if has_user_service; then
   if [[ -n "${main_pid:-}" && "$main_pid" != "0" ]]; then
     echo "PID:       $main_pid"
   fi
-  if command -v systemctl >/dev/null 2>&1 && [[ -f "$ADMIN_SERVICE_FILE" ]]; then
+  if has_admin_user_service; then
     admin_status="$(systemctl --user is-active "$ADMIN_SERVICE" 2>/dev/null || true)"
     [[ -z "$admin_status" ]] && admin_status="unknown"
     echo "Admin:     $admin_status (systemd)"
   fi
 elif is_running; then
-  echo "Status:    running"
+  if ui_is_available; then
+    echo "Status:    running"
+  else
+    echo "Status:    unhealthy"
+  fi
   echo "PID:       $(running_pid)"
+  if is_admin_running; then
+    if admin_is_available; then
+      echo "Admin:     running"
+    else
+      echo "Admin:     unhealthy"
+    fi
+    echo "Admin PID: $(running_admin_pid)"
+  else
+    echo "Admin:     stopped"
+  fi
 else
   echo "Status:    stopped"
+  if is_admin_running; then
+    if admin_is_available; then
+      echo "Admin:     running"
+    else
+      echo "Admin:     unhealthy"
+    fi
+    echo "Admin PID: $(running_admin_pid)"
+  else
+    echo "Admin:     stopped"
+  fi
 fi

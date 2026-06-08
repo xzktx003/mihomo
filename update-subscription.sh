@@ -44,6 +44,9 @@ if has_user_service; then
 elif is_running; then
   "$SCRIPT_DIR/restart.sh" >/dev/null
   echo "mihomo restarted with the new subscription"
+elif [[ -f "$SYSTEMD_SERVICE_FILE" ]]; then
+  "$SCRIPT_DIR/start.sh" >/dev/null
+  echo "mihomo started with the new subscription"
 else
   echo "Subscription updated. Run $SCRIPT_DIR/start.sh to launch mihomo."
 fi
