@@ -1,0 +1,3 @@
+# Copy this file to mixin.local.yaml and replace the placeholder.
+# mixin.local.yaml is ignored by Git and merged after mixin.yaml.
+secret: "CHANGE_ME"

@@ -3,6 +3,7 @@
 __pycache__/
 tmp/
 backups/
+*.bak.*
 
 # Logs and local databases
 *.log
@@ -13,6 +14,7 @@ backups/
 .subscriptions.json
 config.yaml
 config.raw.yaml
+mixin.local.yaml
 
 # User-specific service state
 *.pid

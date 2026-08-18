@@ -8,12 +8,13 @@ This directory contains a standalone `mihomo` deployment with a locally hosted `
 - Active config: `./config.yaml`
 - Raw subscription config: `./config.raw.yaml`
 - Sanitized examples for Git backup: `./config.example.yaml`, `./config.raw.example.yaml`
-- Local overrides: `./mixin.yaml`
+- Public local overrides: `./mixin.yaml`
+- Private local overrides: `./mixin.local.yaml` (copy from `./mixin.local.example.yaml`)
 - Subscription examples for Git backup: `./.subscription_url.example`, `./subscriptions.example.json`
 - UI files: `./public`
 - Log file: `./mi.log`
 
-The live subscription URLs, controller secret, and proxy credentials remain local-only and are not tracked in Git. The example files keep the directory structure recoverable without publishing runtime secrets.
+The live subscription URLs, controller secret, and proxy credentials remain local-only and are not tracked in Git. Put the controller secret and other private overrides in `mixin.local.yaml`; it is merged after `mixin.yaml`. The example files keep the directory structure recoverable without publishing runtime secrets.
 
 ## Commands
 

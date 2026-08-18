@@ -6,6 +6,7 @@ MIHOMO_BIN="$BASE_DIR/mihomo"
 YQ_BIN="$BASE_DIR/bin/yq"
 RAW_CONFIG="$BASE_DIR/config.raw.yaml"
 MIXIN_CONFIG="$BASE_DIR/mixin.yaml"
+LOCAL_MIXIN_CONFIG="$BASE_DIR/mixin.local.yaml"
 CONFIG_FILE="$BASE_DIR/config.yaml"
 SUBSCRIPTION_FILE="$BASE_DIR/.subscription_url"
 PID_FILE="$BASE_DIR/mihomo.pid"
@@ -226,12 +227,28 @@ merge_config() {
 
   local tmp_config
   tmp_config="$TMP_DIR/config.yaml.$$"
+  local merge_output
+  local test_output
+  local -a merge_sources=("$MIXIN_CONFIG" "$RAW_CONFIG" "$MIXIN_CONFIG")
 
-  "$YQ_BIN" eval-all \
+  if [[ -f "$LOCAL_MIXIN_CONFIG" ]]; then
+    merge_sources+=("$LOCAL_MIXIN_CONFIG")
+  fi
+
+  if ! merge_output="$("$YQ_BIN" eval-all \
     '. as $item ireduce ({}; . *+ $item) | (.. | select(tag == "!!seq")) |= unique' \
-    "$MIXIN_CONFIG" "$RAW_CONFIG" "$MIXIN_CONFIG" >"$tmp_config"
+    "${merge_sources[@]}" 2>&1 >"$tmp_config")"; then
+    rm -f "$tmp_config"
+    [[ -n "$merge_output" ]] && printf '%s\n' "$merge_output" >&2
+    return 1
+  fi
 
-  "$MIHOMO_BIN" -t -d "$BASE_DIR" -f "$tmp_config" >/dev/null
+  if ! test_output="$("$MIHOMO_BIN" -t -d "$BASE_DIR" -f "$tmp_config" 2>&1)"; then
+    rm -f "$tmp_config"
+    [[ -n "$test_output" ]] && printf '%s\n' "$test_output" >&2
+    return 1
+  fi
+
   mv "$tmp_config" "$CONFIG_FILE"
 }
 
@@ -251,8 +268,20 @@ download_subscription() {
             -H 'Accept: */*' \
             "$source_path" -o "$target_path"; then
             return 0
+          else
+            curl_status=$?
           fi
-          curl_status=$?
+        done
+        for ua in "${user_agents[@]}"; do
+          if env -u http_proxy -u https_proxy -u HTTP_PROXY -u HTTPS_PROXY -u all_proxy -u ALL_PROXY \
+            curl -fsSL --retry 2 --connect-timeout 10 --max-time 90 \
+            -A "$ua" \
+            -H 'Accept: */*' \
+            "$source_path" -o "$target_path"; then
+            return 0
+          else
+            curl_status=$?
+          fi
         done
         return "$curl_status"
       elif command -v wget >/dev/null 2>&1; then

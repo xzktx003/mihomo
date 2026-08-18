@@ -20,12 +20,27 @@ backup_dir="$(backup_configs)"
 tmp_raw="$TMP_DIR/subscription.yaml.$$"
 trap 'rm -f "$tmp_raw"' EXIT
 
-download_subscription "$subscription_url" "$tmp_raw"
+restore_backup() {
+  [[ -f "$backup_dir/config.raw.yaml" ]] && cp -f "$backup_dir/config.raw.yaml" "$RAW_CONFIG"
+  [[ -f "$backup_dir/config.yaml" ]] && cp -f "$backup_dir/config.yaml" "$CONFIG_FILE"
+}
+
+if ! download_subscription "$subscription_url" "$tmp_raw"; then
+  restore_backup
+  echo "Subscription download failed. Restored backup from $backup_dir" >&2
+  exit 1
+fi
+
+if [[ ! -s "$tmp_raw" ]]; then
+  restore_backup
+  echo "Subscription download produced an empty file. Restored backup from $backup_dir" >&2
+  exit 1
+fi
+
 cp -f "$tmp_raw" "$RAW_CONFIG"
 
 if ! merge_config; then
-  [[ -f "$backup_dir/config.raw.yaml" ]] && cp -f "$backup_dir/config.raw.yaml" "$RAW_CONFIG"
-  [[ -f "$backup_dir/config.yaml" ]] && cp -f "$backup_dir/config.yaml" "$CONFIG_FILE"
+  restore_backup
   echo "Subscription update failed. Restored backup from $backup_dir" >&2
   exit 1
 fi

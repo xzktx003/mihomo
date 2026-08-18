@@ -329,7 +329,7 @@
       <h1>订阅池管理</h1>
       <p class="lead">
         这里不再只管理一条订阅。你可以保存多条订阅链接，随时新增、编辑、删除，并直接切换当前激活的订阅。
-        切换激活订阅时，页面会调用本机脚本下载配置并自动重启 `mihomo`。
+        每条订阅都可以单独拉取，也可以单独切换；执行后会调用本机脚本并自动重启 `mihomo`。
       </p>
 
       <section class="top-grid">
@@ -351,7 +351,7 @@
         <article class="panel stack">
           <div class="section-title">已保存订阅</div>
           <div class="hint">
-            激活中的订阅会打上“当前使用”标记。删除时不能直接删掉当前激活项，先切换到别的订阅再删除。
+            激活中的订阅会打上“当前使用”标记，可直接重新拉取。删除时不能直接删掉当前激活项，先切换到别的订阅再删除。
           </div>
           <div class="subscription-list" id="subscription-list">
             <div class="empty">输入控制密钥后点击“读取订阅池”加载当前配置。</div>
@@ -519,7 +519,8 @@
                 <div class="subscription-meta">更新于 ${escapeHtml(item.updated_at || item.created_at || "-")}</div>
                 <div class="row-actions" style="margin-top:12px;">
                   <button class="secondary" data-sub-action="edit" data-id="${escapeHtml(item.id)}">编辑</button>
-                  <button class="primary" data-sub-action="activate" data-id="${escapeHtml(item.id)}" ${isActive ? "disabled" : ""}>切换到此订阅</button>
+                  <button class="secondary" data-sub-action="fetch" data-id="${escapeHtml(item.id)}">拉取</button>
+                  <button class="primary" data-sub-action="activate" data-id="${escapeHtml(item.id)}" ${isActive ? "disabled" : ""}>切换</button>
                   <button class="danger" data-sub-action="delete" data-id="${escapeHtml(item.id)}" data-name="${escapeHtml(item.name)}" ${isActive ? "disabled" : ""}>删除</button>
                 </div>
               </div>
@@ -540,8 +541,13 @@
               return;
             }
 
+            if (action === "fetch") {
+              await fetchSubscription(id);
+              return;
+            }
+
             if (action === "activate") {
-              await activateSubscription(id);
+              await switchSubscription(id);
               return;
             }
 
@@ -671,13 +677,16 @@
         }
       }
 
-      async function activateSubscription(id) {
+      async function fetchSubscription(id) {
         if (!requireSecret()) {
           return;
         }
 
+        const item = state.subscriptions.find((entry) => entry.id === id);
+        const isActive = id === state.activeId;
+
         setBusy(true);
-        setStatus("正在切换激活订阅...");
+        setStatus(isActive ? "正在拉取当前订阅..." : "正在拉取该订阅...");
         setOutput("请求已发送，等待本机脚本执行完成...");
 
         try {
@@ -695,7 +704,44 @@
           }
 
           applyPayload(data);
-          setStatus("订阅切换完成，mihomo 已按新订阅重启。");
+          setStatus(
+            isActive
+              ? `订阅已拉取${item ? `：${item.name}` : ""}，mihomo 已重启。`
+              : `订阅已拉取${item ? `：${item.name}` : ""}，mihomo 已应用该配置。`
+          );
+        } catch (error) {
+          setStatus(`请求失败: ${error.message}`, true);
+          setOutput(String(error));
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function switchSubscription(id) {
+        if (!requireSecret()) {
+          return;
+        }
+
+        setBusy(true);
+        setStatus("正在切换订阅...");
+        setOutput("请求已发送，等待本机脚本执行完成...");
+
+        try {
+          const { response, data } = await callApi("/api/subscriptions/activate", {
+            method: "POST",
+            headers: authHeaders(),
+            body: JSON.stringify({ id }),
+          });
+
+          setOutput(data.output || JSON.stringify(data, null, 2));
+
+          if (!response.ok || !data.ok) {
+            setStatus(formatError(data, "切换订阅失败。"), true);
+            return;
+          }
+
+          applyPayload(data);
+          setStatus("订阅切换完成，mihomo 已按该订阅重启。");
         } catch (error) {
           setStatus(`请求失败: ${error.message}`, true);
           setOutput(String(error));

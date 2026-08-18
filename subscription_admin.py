@@ -18,6 +18,7 @@ PUBLIC_DIR = BASE_DIR / "public"
 CONFIG_FILE = BASE_DIR / "config.yaml"
 SUBSCRIPTION_FILE = BASE_DIR / ".subscription_url"
 SUBSCRIPTIONS_FILE = BASE_DIR / ".subscriptions.json"
+PID_FILE = BASE_DIR / "mihomo.pid"
 UPDATE_SCRIPT = BASE_DIR / "update-subscription.sh"
 YQ_BIN = BASE_DIR / "bin" / "yq"
 HTML_FILE = PUBLIC_DIR / "subscription.html"
@@ -55,6 +56,14 @@ def current_subscription_url() -> str:
 def current_service_state() -> str:
     result = run_command(["systemctl", "--user", "is-active", "mihomo.service"])
     state = result.stdout.strip()
+    if state and state != "unknown":
+        return state
+
+    if PID_FILE.exists():
+        pid = PID_FILE.read_text(encoding="utf-8").strip()
+        if pid.isdigit() and Path(f"/proc/{pid}").exists():
+            return "running"
+
     return state or "unknown"
 
 
@@ -209,6 +218,12 @@ def api_payload(base_url: str, store: dict[str, object] | None = None) -> dict[s
 def summarize_failure(output: str) -> tuple[str, str]:
     normalized = output.lower()
 
+    if "unsupport proxy type: anytls" in normalized or "unsupported proxy type: anytls" in normalized:
+        return (
+            "subscription update failed",
+            "The downloaded subscription contains anytls nodes, but the current mihomo binary does not support that proxy type.",
+        )
+
     if "404" in output and "curl: (22)" in output:
         return (
             "subscription update failed",
@@ -221,10 +236,16 @@ def summarize_failure(output: str) -> tuple[str, str]:
             "The remote server returned HTTP 403. The subscription URL may require a new token or authorization.",
         )
 
-    if "timed out" in normalized:
+    if "timed out" in normalized or "timeout" in normalized or "curl: (28)" in normalized:
         return (
             "subscription update failed",
             "The remote server did not respond in time. Try again later or verify the subscription URL from another machine.",
+        )
+
+    if "ssl_error_syscall" in normalized or "curl: (35)" in normalized:
+        return (
+            "subscription update failed",
+            "The TLS connection to the subscription server failed. The provider may be unreachable from this host or blocking the current network path.",
         )
 
     if "could not resolve host" in normalized:
@@ -237,6 +258,12 @@ def summarize_failure(output: str) -> tuple[str, str]:
         return (
             "subscription update failed",
             "Only http, https, file URLs, or existing local files are supported.",
+        )
+
+    if "subscription download failed" in normalized:
+        return (
+            "subscription update failed",
+            "The subscription could not be downloaded. Check the execution output for the curl error returned by the provider or network.",
         )
 
     return ("subscription update failed", "Check the execution output for the exact download or parse error.")
@@ -301,7 +328,6 @@ def activate_subscription(
     combined_output = (result.stdout + result.stderr).strip()
     if result.returncode != 0:
         error, hint = summarize_failure(combined_output)
-        latest_store = ensure_store()
         return (
             HTTPStatus.INTERNAL_SERVER_ERROR,
             {
@@ -310,7 +336,7 @@ def activate_subscription(
                 "error_hint": hint,
                 "output": combined_output,
                 "saved_subscription": entry,
-                **api_payload(base_url, latest_store),
+                **api_payload(base_url, store),
             },
         )
 
