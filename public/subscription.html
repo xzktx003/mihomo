@@ -364,7 +364,7 @@
           <div class="field">
             <label for="secret">控制密钥</label>
             <input id="secret" type="password" placeholder="输入当前 mihomo secret" />
-            <div class="hint">页面不会自动回显 secret，密钥只保存在当前浏览器的本地存储里。</div>
+            <div class="hint">输入控制密钥后自动加载已有订阅，也可点击“读取订阅池”。密钥保存在当前浏览器中。</div>
           </div>
 
           <div class="field">
@@ -434,13 +434,25 @@
       entryMeta.textContent = `节点选择页: ${uiBase} | 订阅管理 API: ${apiBase}`;
       openUi.href = uiBase;
 
-      const savedSecret = localStorage.getItem("mihomo-admin-secret");
+      let savedSecret = "";
+      try {
+        savedSecret = localStorage.getItem("mihomo-admin-secret") || "";
+      } catch {
+        // 浏览器禁用本地存储时仍允许手动读取订阅。
+      }
       if (savedSecret) {
         secretInput.value = savedSecret;
       }
 
       secretInput.addEventListener("change", () => {
-        localStorage.setItem("mihomo-admin-secret", secretInput.value.trim());
+        try {
+          localStorage.setItem("mihomo-admin-secret", secretInput.value.trim());
+        } catch {
+          // 密钥仍可用于当前页面的请求。
+        }
+        refreshStatus(false).catch((error) => {
+          showLoadError(`无法连接订阅管理 API（${apiBase}）：${error.message}`);
+        });
       });
 
       function setBusy(nextBusy) {
@@ -462,6 +474,19 @@
         outputBox.textContent = message || "没有输出";
       }
 
+      function notifyNodesChanged() {
+        try {
+          localStorage.setItem("mihomo-subscription-updated", String(Date.now()));
+        } catch {
+          // 节点页也会定期读取配置，浏览器禁用存储时仍可同步。
+        }
+      }
+
+      function showLoadError(message) {
+        setStatus(message, true);
+        subscriptionList.innerHTML = `<div class="empty">${escapeHtml(message)}</div>`;
+      }
+
       function authHeaders() {
         return {
           "Content-Type": "application/json",
@@ -471,7 +496,7 @@
 
       function requireSecret() {
         if (!secretInput.value.trim()) {
-          setStatus("请先输入控制密钥。", true);
+          showLoadError("已有订阅需要控制密钥才能读取。请在右侧输入 secret，然后点击“读取订阅池”。");
           return false;
         }
         return true;
@@ -614,7 +639,9 @@
         });
 
         if (!response.ok || !data.ok) {
-          setStatus(formatError(data, "读取订阅池失败。"), true);
+          showLoadError(response.status === 403
+            ? "控制密钥不正确，请填写当前 mihomo secret 后重新读取。"
+            : formatError(data, "读取订阅池失败。"));
           setOutput(JSON.stringify(data, null, 2));
           return;
         }
@@ -669,6 +696,7 @@
             fillEditor(data.saved_subscription);
           }
           setStatus(activate ? "订阅已保存并切换。" : "订阅已保存。");
+          if (activate) notifyNodesChanged();
         } catch (error) {
           setStatus(`请求失败: ${error.message}`, true);
           setOutput(String(error));
@@ -709,6 +737,7 @@
               ? `订阅已拉取${item ? `：${item.name}` : ""}，mihomo 已重启。`
               : `订阅已拉取${item ? `：${item.name}` : ""}，mihomo 已应用该配置。`
           );
+          notifyNodesChanged();
         } catch (error) {
           setStatus(`请求失败: ${error.message}`, true);
           setOutput(String(error));
@@ -742,6 +771,7 @@
 
           applyPayload(data);
           setStatus("订阅切换完成，mihomo 已按该订阅重启。");
+          notifyNodesChanged();
         } catch (error) {
           setStatus(`请求失败: ${error.message}`, true);
           setOutput(String(error));
@@ -790,7 +820,7 @@
 
       loadBtn.addEventListener("click", () => {
         refreshStatus(false).catch((error) => {
-          setStatus(`读取失败: ${error.message}`, true);
+          showLoadError(`无法连接订阅管理 API（${apiBase}）：${error.message}`);
           setOutput(String(error));
         });
       });
@@ -817,8 +847,8 @@
       });
 
       if (savedSecret) {
-        refreshStatus(true).catch(() => {
-          setStatus("自动读取订阅池失败，请手动点击“读取订阅池”。", true);
+        refreshStatus(true).catch((error) => {
+          showLoadError(`无法连接订阅管理 API（${apiBase}）：${error.message}`);
         });
       }
     </script>
